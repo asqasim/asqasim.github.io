@@ -56,6 +56,24 @@
             margin-bottom: 8px;
             pointer-events: none;
         }
+
+#expressionModal, #truthTableModal {
+    /* Ensures it's positioned relative to the viewport */
+    position: fixed; 
+    
+    /* Sets a very high stacking order */
+    z-index: 10000; 
+
+    /* Your existing positioning (center on screen) */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+
+}
+
+
+
         /* Animation for modals */
         .animate-fade-in {
             animation: fadeIn 0.3s ease-out forwards;
@@ -75,7 +93,7 @@
 </head>
 <body class="bg-gray-50 text-gray-800 antialiased flex flex-col min-h-screen">
 
-    <header class="bg-white text-gray-900 py-3 shadow-sm sticky top-0 z-50 border-b border-gray-200">
+    <header class="bg-white text-gray-900 py-3 shadow-sm top-0 z-50 border-b border-gray-200">
         <div class="container mx-auto px-6 flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <div class="bg-blue-600 text-white p-1.5 rounded-lg">
