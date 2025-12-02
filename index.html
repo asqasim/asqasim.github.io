@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogicFlow - Boolean Circuit Designer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        
+        #circuitCanvas {
+            background-color: #f8fafc;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            display: block;
+            touch-action: none;
+            outline: none;
+            cursor: default;
+        }
+        .component-item {
+            cursor: grab;
+            transition: all 0.1s ease;
+        }
+        .component-item:active {
+            cursor: grabbing;
+            transform: scale(0.95);
+        }
+        /* Tray Tooltip */
+        .tray-btn:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 4px 8px;
+            font-size: 10px;
+            border-radius: 4px;
+            white-space: nowrap;
+            margin-bottom: 8px;
+            pointer-events: none;
+        }
+        /* Animation for modals */
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        /* Gate Expression coloring */
+        .var-A { color: #EF4444; font-weight: bold; }
+        .var-B { color: #F59E0B; font-weight: bold; }
+        .var-C { color: #10B981; font-weight: bold; }
+        .var-D { color: #3B82F6; font-weight: bold; }
+        .var-E { color: #8B5CF6; font-weight: bold; }
+        .var-F { color: #EC4899; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased flex flex-col min-h-screen">
+
+    <header class="bg-white text-gray-900 py-3 shadow-sm sticky top-0 z-50 border-b border-gray-200">
+        <div class="container mx-auto px-6 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="bg-blue-600 text-white p-1.5 rounded-lg">
+                    <i class="fa-solid fa-microchip text-lg"></i>
+                </div>
+                <span class="text-lg font-bold tracking-tight">Bit<span class="text-blue-600">Wave</span></span>
+            </div>
+            <nav class="hidden md:flex space-x-6 text-sm font-medium text-gray-600">
+                <a href="#designer" class="hover:text-blue-600 transition">Design</a>
+                <a href="#music-player-section" class="hover:text-blue-600 transition">Music</a>
+                <a href="#music-player-section" class="hover:text-blue-600 transition">Help</a>
+            </nav>
+        </div>
+    </header>
+
+    <section id="designer" class="flex-grow flex flex-col h-[90vh] w-full relative">
+        <div class="flex flex-row h-full overflow-hidden relative">
+            
+            <aside id="component-panel" class="w-40 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col z-10 shadow-sm">
+                <div class="p-3 border-b border-gray-100 bg-gray-50">
+                    <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-widest text-center">Components</h2>
+                </div>
+
+                <div class="flex-grow overflow-y-auto p-2 space-y-4">
+                    
+                    <div class="space-y-1">
+                        <h3 class="text-[10px] font-bold text-gray-400 uppercase px-1">Inputs</h3>
+                        <div data-component-type="INPUT" class="component-item p-2 bg-white border border-gray-200 hover:border-blue-400 hover:shadow-sm rounded cursor-grab text-xs flex items-center justify-between group transition-colors">
+                            <span class="font-medium text-gray-600 group-hover:text-blue-600">Switch</span> 
+                            <i class="fa-solid fa-toggle-on text-gray-300 group-hover:text-blue-500"></i>
+                        </div>
+                        <div data-component-type="CONSTANT_0" class="component-item p-2 bg-white border border-gray-200 hover:border-red-400 hover:shadow-sm rounded cursor-grab text-xs font-mono text-center text-gray-500 hover:text-red-500">
+                            CONST 0
+                        </div>
+                        <div data-component-type="CONSTANT_1" class="component-item p-2 bg-white border border-gray-200 hover:border-green-400 hover:shadow-sm rounded cursor-grab text-xs font-mono text-center text-gray-500 hover:text-green-500">
+                            CONST 1
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <h3 class="text-[10px] font-bold text-gray-400 uppercase px-1">Outputs</h3>
+                        <div data-component-type="OUTPUT" class="component-item p-2 bg-white border border-gray-200 hover:border-yellow-400 hover:shadow-sm rounded cursor-grab text-xs flex items-center justify-between group transition-colors">
+                            <span class="font-medium text-gray-600 group-hover:text-yellow-600">Bulb</span> 
+                            <i class="fa-regular fa-lightbulb text-gray-300 group-hover:text-yellow-500"></i>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <h3 class="text-[10px] font-bold text-gray-400 uppercase px-1">Gates</h3>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <div data-component-type="AND" class="component-item py-2 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50 rounded cursor-grab text-[10px] font-bold text-center text-gray-600">AND</div>
+                            <div data-component-type="OR" class="component-item py-2 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50 rounded cursor-grab text-[10px] font-bold text-center text-gray-600">OR</div>
+                            <div data-component-type="NOT" class="component-item py-2 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50 rounded cursor-grab text-[10px] font-bold text-center text-gray-600">NOT</div>
+                            <div data-component-type="XOR" class="component-item py-2 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50 rounded cursor-grab text-[10px] font-bold text-center text-gray-600">XOR</div>
+                            <div data-component-type="NAND" class="component-item py-2 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50 rounded cursor-grab text-[10px] font-bold text-center text-gray-600">NAND</div>
+                            <div data-component-type="NOR" class="component-item py-2 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50 rounded cursor-grab text-[10px] font-bold text-center text-gray-600">NOR</div>
+                            <div data-component-type="XNOR" class="component-item py-2 bg-white border border-gray-200 hover:border-blue-400 hover:bg-blue-50 rounded cursor-grab text-[10px] font-bold text-center text-gray-600">XNOR</div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="relative flex-grow h-full bg-slate-50 overflow-hidden">
+                <canvas id="circuitCanvas" class="w-full h-full"></canvas>
+
+                <div class="absolute bottom-6 left-6 flex items-center space-x-1 bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-200 z-40 transition-transform hover:scale-[1.02]">
+                    
+                    <button id="helpBtn" class="tray-btn w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition relative" title="Help">
+                        <i class="fa-solid fa-question text-sm"></i>
+                    </button>
+                    
+                    <div class="w-px h-4 bg-gray-300 mx-1"></div>
+
+                    <button id="zoomOutBtn" class="tray-btn w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition relative" title="Zoom Out">
+                        <i class="fa-solid fa-minus text-xs"></i>
+                    </button>
+                    <button id="zoomInBtn" class="tray-btn w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition relative" title="Zoom In">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                    </button>
+                    
+                    <div class="w-px h-4 bg-gray-300 mx-1"></div>
+
+                    <button id="deleteBtn" class="tray-btn w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition relative" title="Delete Selected">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                    <button id="clearBtn" class="tray-btn w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-600 transition relative" title="Clear All">
+                        <i class="fa-solid fa-eraser text-xs"></i>
+                    </button>
+
+                    <div class="w-px h-4 bg-gray-300 mx-1"></div>
+
+                    <button id="truthTableBtn" class="tray-btn w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition relative" title="Generate Truth Table">
+                        <i class="fa-solid fa-table text-xs"></i>
+                    </button>
+                    <button id="expressionBtn" class="tray-btn w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-purple-50 hover:text-purple-600 transition relative" title="Generate Boolean Expression">
+                        <i class="fa-solid fa-superscript text-xs"></i>
+                    </button>
+
+                    <div class="w-px h-4 bg-gray-300 mx-1"></div>
+
+                    <button id="listenBtn" class="tray-btn px-4 h-8 rounded-full flex items-center justify-center bg-gray-900 text-white hover:bg-gray-800 transition relative space-x-2 shadow-sm" title="Play Music">
+                        <i class="fa-solid fa-music text-xs"></i>
+                        <span class="text-xs font-bold">Listen</span>
+                    </button>
+                </div>
+
+                <div id="helpModal" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 bg-white p-6 rounded-2xl shadow-2xl border border-gray-100 hidden z-50 animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-lg font-bold text-gray-800">Quick Guide</h4>
+                        <button id="closeHelpBtn" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    <ul class="space-y-3 text-sm text-gray-600">
+                        <li class="flex items-center"><span class="bg-blue-100 text-blue-600 p-1.5 rounded mr-3"><i class="fa-solid fa-hand"></i></span> <strong>Left Drag (Grid):</strong> Pan View</li>
+                        <li class="flex items-center"><span class="bg-purple-100 text-purple-600 p-1.5 rounded mr-3"><i class="fa-solid fa-vector-square"></i></span> <strong>Right Drag:</strong> Select Area</li>
+                        <li class="flex items-center"><span class="bg-green-100 text-green-600 p-1.5 rounded mr-3"><i class="fa-solid fa-arrow-pointer"></i></span> <strong>Click:</strong> Select / Interact</li>
+                        <li class="flex items-center"><span class="bg-yellow-100 text-yellow-600 p-1.5 rounded mr-3"><i class="fa-solid fa-bezier-curve"></i></span> <strong>Connect:</strong> Output (+) to Input</li>
+                        <li class="flex items-center"><span class="bg-red-100 text-red-600 p-1.5 rounded mr-3"><i class="fa-solid fa-trash"></i></span> <strong>Del Key:</strong> Remove Items</li>
+                        <li class="flex items-center"><span class="bg-gray-100 text-gray-600 p-1.5 rounded mr-3"><i class="fa-solid fa-plug"></i></span> <strong>Multiple Wires:</strong> Connect to same input (Implicit OR)</li>
+                    </ul>
+                </div>
+
+                <div id="expressionModal" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] max-w-[90%] bg-white p-6 rounded-2xl shadow-2xl border border-gray-100 hidden z-50 animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-lg font-bold text-gray-800">Boolean Expressions</h4>
+                        <button id="closeExpressionBtn" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    <div id="expressionContent" class="space-y-3 text-sm text-gray-600 font-mono overflow-auto max-h-96">
+                        </div>
+                </div>
+
+                <div id="truthTableModal" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] max-w-[95%] bg-white p-6 rounded-2xl shadow-2xl border border-gray-100 hidden z-50 animate-fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-lg font-bold text-gray-800">Truth Table</h4>
+                        <button id="closeTruthTableBtn" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table id="truthTableContent" class="w-full text-xs text-center border-collapse">
+                            </table>
+                    </div>
+                    <div id="truthTablePagination" class="flex justify-center items-center mt-4 space-x-4 text-sm">
+                        <button id="prevTablePage" class="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition" disabled>
+                            <i class="fa-solid fa-angle-left"></i> Previous
+                        </button>
+                        <span id="tablePageInfo" class="text-gray-600">Row 1 - 16</span>
+                        <button id="nextTablePage" class="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition" disabled>
+                            Next <i class="fa-solid fa-angle-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="messageBox" class="absolute top-6 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-2.5 rounded-full shadow-xl text-sm font-medium hidden transition-opacity duration-300 opacity-0 pointer-events-none z-50">
+                    <span id="messageText"></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="music-player-section" class="bg-gray-900 text-white py-20 min-h-[60vh] flex flex-col items-center justify-center relative overflow-hidden hidden">
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute top-0 left-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+            <div class="absolute top-0 right-0 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+            <div class="absolute -bottom-8 left-20 w-64 h-64 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+        </div>
+
+        <div class="container mx-auto px-4 relative z-10 text-center">
+            <div class="mb-8">
+                <span class="text-blue-400 font-mono text-xs tracking-widest uppercase">Circuit Audio Synthesis</span>
+                <h2 class="text-4xl font-bold mt-2">Logic Harmony</h2>
+                <p class="text-gray-400 mt-2 text-sm">Your circuit generated this soundscape.</p>
+            </div>
+
+            <div class="max-w-md mx-auto bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-3xl p-6 shadow-2xl">
+                <div class="h-32 bg-gray-900/50 rounded-2xl mb-6 flex items-end justify-center space-x-1 p-4" id="visualizer">
+                    <div class="w-1.5 h-8 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div class="w-1.5 h-12 bg-blue-400 rounded-full animate-pulse delay-75"></div>
+                    <div class="w-1.5 h-6 bg-blue-600 rounded-full animate-pulse delay-150"></div>
+                    <div class="w-1.5 h-16 bg-purple-500 rounded-full animate-pulse delay-100"></div>
+                    <div class="w-1.5 h-10 bg-purple-400 rounded-full animate-pulse delay-200"></div>
+                    <div class="w-1.5 h-14 bg-pink-500 rounded-full animate-pulse delay-300"></div>
+                    <div class="w-1.5 h-5 bg-pink-400 rounded-full animate-pulse delay-75"></div>
+                </div>
+
+                <div class="flex items-center justify-between mb-6">
+                    <button class="text-gray-400 hover:text-white transition"><i class="fa-solid fa-backward-step text-xl"></i></button>
+                    <button class="w-14 h-14 bg-white text-gray-900 rounded-full flex items-center justify-center hover:scale-105 transition shadow-lg shadow-white/10">
+                        <i class="fa-solid fa-play text-xl ml-1"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-white transition"><i class="fa-solid fa-forward-step text-xl"></i></button>
+                </div>
+
+                <div class="w-full bg-gray-700 h-1.5 rounded-full mb-2">
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-1.5 rounded-full w-1/3"></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-gray-500 font-mono">
+                    <span>00:45</span>
+                    <span>03:12</span>
+                </div>
+
+                <button class="mt-6 w-full py-3 rounded-xl border border-gray-600 text-gray-300 text-sm font-medium hover:bg-gray-700 hover:text-white transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> Download Track
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-white border-t border-gray-200 py-8">
+        <div class="container mx-auto px-6 text-center">
+            <p class="text-xs text-gray-500">&copy; 2025 LogicFlow Inc. Built for educational purposes.</p>
+        </div>
+    </footer>
+
+    <script>
+        // === Constants ===
+        const GRID_SIZE = 20;
+        const NODE_RADIUS = 6;
+        const INVERSION_BUBBLE_RADIUS = 6;
+        const MAG_SNAP_DISTANCE = 30;
+        const ROWS_PER_PAGE = 16; // Changed from 32 to 16 per request
+        
+        const COLOR_LOW = '#9ca3af';
+        const COLOR_HIGH = '#3b82f6';
+        const COLOR_INDICATOR_ON = '#facc15';
+        const COLOR_SELECTION = '#ef4444';
+        const COLOR_TEXT = '#1f2937';
+        
+        const LABEL_COLORS = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#7C3AED', '#CA8A04', '#F472B6', '#D946EF']; // Up to J (10 inputs)
+
+        const COMPONENT_DIMENSIONS = {
+            INPUT: { w: 60, h: 40 },
+            OUTPUT: { w: 60, h: 40 },
+            CONSTANT_0: { w: 40, h: 40 },
+            CONSTANT_1: { w: 40, h: 40 },
+            NOT: { w: 60, h: 60 }, 
+            AND: { w: 80, h: 60 },
+            OR: { w: 80, h: 60 },
+            XOR: { w: 80, h: 60 },
+            NAND: { w: 80, h: 60 },
+            NOR: { w: 80, h: 60 },
+            XNOR: { w: 80, h: 60 }
+        };
+
+        const GATE_SYMBOLS = {
+            AND: 'AND', OR: 'OR', XOR: 'XOR', NOT: 'NOT',
+            NAND: 'AND', NOR: 'OR', XNOR: 'XOR'
+        };
+        const GATE_OPERATORS = {
+            AND: ' AND ', OR: ' OR ', XOR: ' XOR ', 
+            NAND: ' NAND ', NOR: ' NOR ', XNOR: ' XNOR ' 
+        };
+
+        // === State ===
+        let canvas, ctx;
+        let components = [];
+        let wires = [];
+        let componentIdCounter = 1;
+        let wireIdCounter = 1;
+
+        let cameraX = 0;
+        let cameraY = 0;
+        let scale = 1.0;
+        const MIN_SCALE = 0.5;
+        const MAX_SCALE = 3.0;
+        const ZOOM_STEP = 0.2;
+
+        let isDraggingComponent = false;
+        let isPanning = false;
+        let isSelecting = false; 
+        
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let currentWorldX = 0;
+        let currentWorldY = 0;
+
+        let selectionStartWorld = { x: 0, y: 0 };
+        let selectionCurrentWorld = { x: 0, y: 0 };
+
+        let initialDragPositions = new Map(); 
+        let dragStartWorld = { x: 0, y: 0 };
+
+        let isDrawingWire = false;
+        let wireSourceComponent = null;
+
+        let selectedComponentIds = new Set();
+        let selectedWireIds = new Set();
+        
+        let fullTruthTable = [];
+        let currentPage = 0;
+        let totalPages = 0;
+
+
+        // === Classes ===
+        class Component {
+            constructor(type, x, y) {
+                this.id = componentIdCounter++;
+                this.type = type;
+                this.x = Math.round(x / GRID_SIZE) * GRID_SIZE;
+                this.y = Math.round(y / GRID_SIZE) * GRID_SIZE;
+                this.w = COMPONENT_DIMENSIONS[type].w;
+                this.h = COMPONENT_DIMENSIONS[type].h;
+                this.inputStates = [];
+                this.outputState = 0;
+                this.inputConnections = []; 
+                this.labelColor = '#374151';
+                this.label = '';
+                this.gateInputs = 2; // Default for most gates
+
+                switch (type) {
+                    case 'INPUT':
+                        this.assignLabel();
+                        this.labelColor = LABEL_COLORS[(this.label.charCodeAt(0) - 65) % LABEL_COLORS.length];
+                        this.inputStates = [];
+                        break;
+                    case 'OUTPUT':
+                        this.assignLabel();
+                        this.inputStates = [0];
+                        this.inputConnections = [[]];
+                        break;
+                    case 'CONSTANT_0':
+                        this.label = '0';
+                        this.outputState = 0;
+                        break;
+                    case 'CONSTANT_1':
+                        this.label = '1';
+                        this.outputState = 1;
+                        break;
+                    case 'NOT':
+                        this.label = 'NOT';
+                        this.inputStates = [0];
+                        this.inputConnections = [[]];
+                        this.gateInputs = 1;
+                        break;
+                    default: 
+                        this.label = type;
+                        this.inputStates = new Array(this.gateInputs).fill(0);
+                        this.inputConnections = new Array(this.gateInputs).fill(0).map(() => []);
+                }
+            }
+
+            assignLabel() {
+                this.label = '?'; // Temp, updated by relabel
+            }
+
+            getOutputNode() {
+                if (this.type === 'OUTPUT') return null;
+                let hasBubble = ['NAND', 'NOT', 'NOR', 'XNOR'].includes(this.type);
+                // Shift node further right to not overlap bubble
+                let offsetX = this.w;
+                if (hasBubble) offsetX += INVERSION_BUBBLE_RADIUS * 2.5; 
+                else if (this.type.startsWith('CONSTANT')) offsetX += 12; // Extra space for CONST
+                return { x: this.x + offsetX, y: this.y + this.h / 2, compId: this.id };
+            }
+
+            getInputNodes() {
+                const nodes = [];
+                const count = this.inputConnections.length;
+                if (count === 0) return nodes;
+                const spacing = this.h / (count + 1);
+                for (let i = 0; i < count; i++) {
+                    nodes.push({ x: this.x, y: this.y + spacing * (i + 1), index: i, compId: this.id });
+                }
+                return nodes;
+            }
+
+            evaluate(inputValues = this.inputStates) {
+                if (this.type === 'CONSTANT_0') return 0;
+                if (this.type === 'CONSTANT_1') return 1;
+                if (this.type === 'INPUT') return this.outputState; // Return current switch state
+
+                let result = 0;
+                const inputs = inputValues.map(v => v === 1 ? 1 : 0); // Normalize to 0/1
+
+                switch (this.type) {
+                    case 'OUTPUT': result = inputs[0]; break;
+                    case 'NOT': result = 1 - inputs[0]; break;
+                    case 'AND': result = inputs.reduce((acc, val) => acc & val, 1); break;
+                    case 'OR': result = inputs.reduce((acc, val) => acc | val, 0); break;
+                    case 'XOR': result = inputs.reduce((acc, val) => acc ^ val, 0); break;
+                    case 'NAND': result = 1 - inputs.reduce((acc, val) => acc & val, 1); break;
+                    case 'NOR': result = 1 - inputs.reduce((acc, val) => acc | val, 0); break;
+                    case 'XNOR': result = 1 - inputs.reduce((acc, val) => acc ^ val, 0); break;
+                }
+                // Only update internal state if evaluation is not external (e.g., truth table generation)
+                if (inputValues === this.inputStates) {
+                    this.outputState = result;
+                }
+                return result;
+            }
+        }
+
+        // === Logic Functions ===
+
+        /**
+         * Propagates the current input states through the circuit (runs multiple times to stabilize).
+         */
+        function propagate() {
+            // Maximum 5 iterations should be enough for any acyclic circuit
+            for (let i = 0; i < 5; i++) { 
+                // 1. Update wire states from sources
+                wires.forEach(w => {
+                    const src = components.find(c => c.id === w.source.compId);
+                    if (src) w.state = src.evaluate();
+                });
+                
+                // 2. Update component input states and evaluate
+                components.forEach(c => {
+                    if (c.type === 'INPUT' || c.type.startsWith('CONSTANT')) return;
+
+                    let inputsChanged = false;
+                    c.inputConnections.forEach((connectedWires, nodeIndex) => {
+                        let inputVal = 0;
+                        // Implicit OR: if ANY wire connected to this node is 1, the input is 1
+                        connectedWires.forEach(wireId => {
+                            const w = wires.find(wire => wire.id === wireId);
+                            if (w && w.state === 1) inputVal = 1;
+                        });
+                        if (c.inputStates[nodeIndex] !== inputVal) {
+                            c.inputStates[nodeIndex] = inputVal;
+                            inputsChanged = true;
+                        }
+                    });
+
+                    if (inputsChanged || i === 0) {
+                       c.evaluate(); // Update output state
+                    }
+                });
+            }
+        }
+        
+        /**
+         * Recursive function to generate the Boolean expression for a given component.
+         * @param {number} compId - The ID of the component (usually an OUTPUT).
+         * @returns {string} The fully nested Boolean expression.
+         */
+        function getExpression(compId, visited = new Set(), depth = 0) {
+            const comp = components.find(c => c.id === compId);
+            if (!comp) return '';
+            
+            // Base Case 1: Input or Constant
+            if (comp.type === 'INPUT' || comp.type.startsWith('CONSTANT')) {
+                const label = comp.label;
+                const colorClass = `var-${label}`;
+                return `<span class="${colorClass}">${label}</span>`;
+            }
+
+            // Base Case 2: Already visited in this path (cyclic circuit)
+            if (visited.has(compId) && depth > 0) {
+                 return `[${comp.label} LOOP]`;
+            }
+            visited.add(compId);
+
+            // GATHER INPUT EXPRESSIONS
+            // This logic has been updated to support implicit OR on multiple wires
+            const nodeExpressions = comp.inputConnections.map(inputWires => {
+                if (inputWires.length === 0) return null; // Disconnected pin
+
+                // Get all valid sources for this single pin
+                const sources = inputWires.map(wid => {
+                    const w = wires.find(wire => wire.id === wid);
+                    return w ? w.source.compId : null;
+                }).filter(id => id !== null);
+
+                if (sources.length === 0) return null;
+
+                // Recursively get expression for each source connected to this pin
+                const subExprs = sources.map(srcId => getExpression(srcId, new Set(visited), depth + 1));
+                
+                // If multiple wires are on one pin, they are implicitly OR'ed
+                if (subExprs.length > 1) {
+                    return `(${subExprs.join(' OR ')})`;
+                }
+                return subExprs[0];
+            });
+
+            // If it's an OUTPUT component, it only has 1 input array, so we just return that result
+            if (comp.type === 'OUTPUT') {
+                return nodeExpressions[0] || '[Disconnected]';
+            }
+
+            // For Gates, filter out disconnected pins for operations like OR, but be careful with AND/NOT
+            // To simplify, if a pin is disconnected, we treat it as 0 (Logic Low) usually, 
+            // but for expression display, if all pins are null, it's disconnected.
+            
+            // NOTE: The previous logic relied on filtered list. 
+            // Here, we should keep the structure of the gate's expected inputs.
+            const validInputs = nodeExpressions.filter(e => e !== null);
+            
+            if (validInputs.length === 0) return '[Disconnected]';
+
+            // Gates (AND, OR, NOT, etc.)
+            let expression;
+            const op = GATE_OPERATORS[comp.type] || ' ? ';
+            const symbol = GATE_SYMBOLS[comp.type] || comp.type;
+
+            if (comp.type === 'NOT') {
+                expression = `${op}(${validInputs[0]})`;
+            } else {
+                expression = validInputs.join(op);
+                expression = `(${expression})`; // Group binary operations
+            }
+            
+            // Add NOT bar for NAND/NOR/XNOR
+            if (['NAND', 'NOR', 'XNOR'].includes(comp.type)) {
+                // Simple representation for bar (can't draw line in HTML easily)
+                expression = `NOT ${expression}`;
+            }
+
+            return expression;
+        }
+
+        /**
+         * Generates the truth table for the entire circuit.
+         */
+        function generateTruthTable() {
+            const inputComps = components.filter(c => c.type === 'INPUT').sort((a, b) => a.label.localeCompare(b.label));
+            const outputComps = components.filter(c => c.type === 'OUTPUT').sort((a, b) => a.label.localeCompare(b.label));
+            
+            const connectedOutputComps = outputComps.filter(o => {
+                return wires.some(w => w.target.compId === o.id);
+            });
+
+            const numInputs = inputComps.length;
+            const numOutputs = connectedOutputComps.length;
+
+            if (numInputs === 0 && numOutputs === 0) {
+                showMessage("The circuit must contain at least one Input and one connected Output.", true);
+                return { table: [], inputs: [], outputs: [] };
+            }
+            if (numInputs > 10) {
+                 showMessage("Max 10 inputs (1024 rows) supported for table generation.", true);
+                return { table: [], inputs: [], outputs: [] };
+            }
+            if (numOutputs > 16) {
+                 showMessage("Max 16 connected outputs supported for table generation.", true);
+                return { table: [], inputs: [], outputs: [] };
+            }
+
+            const totalRows = Math.pow(2, numInputs);
+            const table = [];
+
+            // Temporary map to hold input state for the current row's evaluation
+            const inputMap = new Map();
+
+            for (let i = 0; i < totalRows; i++) {
+                const row = {};
+                const inputStates = [];
+                const outputStates = [];
+
+                // 1. Determine Input States for the current row (i)
+                for (let j = 0; j < numInputs; j++) {
+                    const state = (i >> (numInputs - 1 - j)) & 1;
+                    inputStates.push(state);
+                    const inputLabel = inputComps[j].label;
+                    inputMap.set(inputComps[j].id, state);
+                    row[inputLabel] = state;
+                }
+
+                // 2. Simulate Circuit (using a map to store component results)
+                const componentResults = new Map();
+                // Initialize constants
+                components.filter(c => c.type.startsWith('CONSTANT')).forEach(c => {
+                    componentResults.set(c.id, c.evaluate());
+                });
+
+                // A recursive closure to evaluate a component's output for the current input combination
+                const evaluateComponent = (compId) => {
+                    if (componentResults.has(compId)) {
+                        return componentResults.get(compId);
+                    }
+
+                    const c = components.find(comp => comp.id === compId);
+                    if (!c) return 0; 
+                    
+                    if (c.type === 'INPUT') {
+                        // Base case: Use the state from the input combination map
+                        return inputMap.get(compId) || 0;
+                    }
+
+                    // Recursively get the values of all inputs connected to this component
+                    const inputValues = c.inputConnections.map((connectedWires, nodeIndex) => {
+                        // UPDATED: Implicit OR logic for table generation
+                        // Loop through ALL wires on this specific input node.
+                        let implicitOrResult = 0;
+                        
+                        for(let wireId of connectedWires) {
+                             const connectedWire = wires.find(w => w.id === wireId);
+                             if (connectedWire) {
+                                 const val = evaluateComponent(connectedWire.source.compId);
+                                 if (val === 1) {
+                                     implicitOrResult = 1;
+                                     // Optimization: if any wire is 1, the node is 1, we can break loop if we want, 
+                                     // but let's just finish the loop for simplicity.
+                                 }
+                             }
+                        }
+                        
+                        return implicitOrResult;
+                    });
+
+                    // Evaluate the component with the calculated input values
+                    const output = c.evaluate(inputValues);
+                    componentResults.set(compId, output);
+                    return output;
+                };
+
+                // 3. Get Output States
+                connectedOutputComps.forEach(o => {
+                    const outputValue = evaluateComponent(o.id);
+                    row[o.label] = outputValue;
+                    outputStates.push(outputValue);
+                });
+
+                table.push(row);
+            }
+            return { table, inputs: inputComps, outputs: connectedOutputComps };
+        }
+
+        // === Rendering Results ===
+
+        function showExpressions() {
+            const outputComps = components.filter(c => c.type === 'OUTPUT').sort((a, b) => a.label.localeCompare(b.label));
+            const expressionsContainer = document.getElementById('expressionContent');
+            expressionsContainer.innerHTML = '';
+            
+            const connectedExpressions = outputComps.map(o => {
+                const isConnected = wires.some(w => w.target.compId === o.id);
+                if (isConnected) {
+                    const expression = getExpression(o.id);
+                    return `<div class="p-2 border border-gray-100 rounded-lg bg-gray-50 flex flex-wrap items-center">
+                                <span class="font-extrabold text-gray-800 mr-2">${o.label}:</span> 
+                                <span class="text-sm break-all">${expression}</span>
+                            </div>`;
+                }
+                return null;
+            }).filter(x => x !== null);
+
+            if (connectedExpressions.length === 0) {
+                expressionsContainer.innerHTML = `<p class="text-center text-gray-500 py-4">No outputs are connected to the circuit. Please connect your output components (e.g., F1).</p>`;
+            } else {
+                expressionsContainer.innerHTML = connectedExpressions.join('');
+            }
+            
+            document.getElementById('expressionModal').classList.remove('hidden');
+        }
+
+        function showTruthTable() {
+            const { table, inputs, outputs } = generateTruthTable();
+            if (table.length === 0) return; // Error message already shown
+
+            fullTruthTable = table;
+            currentPage = 0;
+            totalPages = Math.ceil(fullTruthTable.length / ROWS_PER_PAGE);
+
+            renderTruthTablePage(inputs, outputs);
+            document.getElementById('truthTableModal').classList.remove('hidden');
+        }
+
+        function renderTruthTablePage(inputs, outputs) {
+            const tableElement = document.getElementById('truthTableContent');
+            const startIndex = currentPage * ROWS_PER_PAGE;
+            const endIndex = Math.min(startIndex + ROWS_PER_PAGE, fullTruthTable.length);
+            const pageData = fullTruthTable.slice(startIndex, endIndex);
+
+            tableElement.innerHTML = '';
+
+            // 1. Header Row (Inputs | Outputs)
+            const inputHeaders = inputs.map(i => `<th class="px-2 py-2 border-r last:border-r-0 bg-blue-100 text-blue-800">${i.label}</th>`).join('');
+            const outputHeaders = outputs.map(o => `<th class="px-2 py-2 border-l first:border-l-0 bg-yellow-100 text-yellow-800">${o.label}</th>`).join('');
+            
+            const headerRow = `
+                <thead class="sticky top-0 shadow-sm border-b border-gray-300">
+                    <tr>
+                        <th colspan="${inputs.length}" class="p-2 border-r bg-blue-200 text-blue-900 font-bold text-sm">Inputs</th>
+                        <th colspan="${outputs.length}" class="p-2 bg-yellow-200 text-yellow-900 font-bold text-sm">Outputs</th>
+                    </tr>
+                    <tr>${inputHeaders}${outputHeaders}</tr>
+                </thead>
+            `;
+            tableElement.insertAdjacentHTML('afterbegin', headerRow);
+
+            // 2. Body Rows
+            let bodyHtml = '<tbody>';
+            pageData.forEach((row, index) => {
+                const rowNum = startIndex + index;
+                const rowClass = rowNum % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-100 hover:bg-gray-200';
+                
+                let inputCells = '';
+                inputs.forEach(i => {
+                    inputCells += `<td class="p-1 border-r text-gray-700">${row[i.label]}</td>`;
+                });
+
+                let outputCells = '';
+                outputs.forEach(o => {
+                    const outputVal = row[o.label];
+                    const outputClass = outputVal === 1 ? 'text-green-600 font-bold' : 'text-red-500';
+                    outputCells += `<td class="p-1 border-l text-gray-700 ${outputClass}">${outputVal}</td>`;
+                });
+
+                bodyHtml += `<tr class="${rowClass}">${inputCells}${outputCells}</tr>`;
+            });
+            bodyHtml += '</tbody>';
+            tableElement.insertAdjacentHTML('beforeend', bodyHtml);
+
+            // 3. Pagination Update
+            document.getElementById('prevTablePage').disabled = currentPage === 0;
+            document.getElementById('nextTablePage').disabled = currentPage >= totalPages - 1;
+            document.getElementById('tablePageInfo').textContent = `Rows ${startIndex + 1} - ${endIndex} of ${fullTruthTable.length}`;
+        }
+
+
+        // === Helpers ===
+        
+        function screenToWorld(sx, sy) {
+            return {
+                x: sx / scale - cameraX,
+                y: sy / scale - cameraY
+            };
+        }
+
+        function showMessage(msg, isError = false) {
+            const el = document.getElementById('messageBox');
+            const txt = document.getElementById('messageText');
+            txt.textContent = msg;
+            el.className = `absolute top-6 left-1/2 transform -translate-x-1/2 px-6 py-2.5 rounded-full shadow-xl text-sm font-medium transition-opacity duration-300 pointer-events-none z-50 ${isError ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'}`;
+            el.classList.remove('hidden', 'opacity-0');
+            el.classList.add('opacity-100');
+            setTimeout(() => {
+                el.classList.replace('opacity-100', 'opacity-0');
+                setTimeout(() => el.classList.add('hidden'), 300);
+            }, 3000);
+        }
+
+        function isPointNearBezier(px, py, x1, y1, x2, y2) {
+            const dist = Math.abs(x2 - x1) * 0.5;
+            const cp1x = x1 + Math.max(dist, 20);
+            const cp2x = x2 - Math.max(dist, 20);
+            const samples = 20;
+            const threshold = 10 / scale; 
+            for (let i = 0; i <= samples; i++) {
+                const t = i / samples;
+                const invT = 1 - t;
+                const x = invT*invT*invT*x1 + 3*invT*invT*t*cp1x + 3*invT*t*t*cp2x + t*t*t*x2;
+                const y = invT*invT*invT*y1 + 3*invT*invT*t*y1 + 3*invT*t*t*y2 + t*t*t*y2;
+                if (Math.hypot(px - x, py - y) < threshold) return true;
+            }
+            return false;
+        }
+
+        function isPointInRect(px, py, rx1, ry1, rx2, ry2) {
+            const xMin = Math.min(rx1, rx2);
+            const xMax = Math.max(rx1, rx2);
+            const yMin = Math.min(ry1, ry2);
+            const yMax = Math.max(ry1, ry2);
+            return px >= xMin && px <= xMax && py >= yMin && py <= yMax;
+        }
+
+        function relabelComponents(type) {
+            const targetComps = components.filter(c => c.type === type).sort((a, b) => a.id - b.id);
+            targetComps.forEach((comp, index) => {
+                if (type === 'INPUT') {
+                    comp.label = String.fromCharCode(65 + index); // A, B, C...
+                    comp.labelColor = LABEL_COLORS[index % LABEL_COLORS.length];
+                } else if (type === 'OUTPUT') {
+                    comp.label = `F${index + 1}`; // F1, F2...
+                }
+            });
+        }
+
+        // === Drawing ===
+
+        function drawGrid() {
+            ctx.save();
+            ctx.strokeStyle = '#e2e8f0'; 
+            ctx.lineWidth = 1 / scale; 
+            const topLeft = screenToWorld(0, 0);
+            const bottomRight = screenToWorld(canvas.width, canvas.height);
+            const startX = Math.floor(topLeft.x / GRID_SIZE) * GRID_SIZE;
+            const endX = Math.ceil(bottomRight.x / GRID_SIZE) * GRID_SIZE;
+            const startY = Math.floor(topLeft.y / GRID_SIZE) * GRID_SIZE;
+            const endY = Math.ceil(bottomRight.y / GRID_SIZE) * GRID_SIZE;
+            ctx.beginPath();
+            for (let x = startX; x <= endX; x += GRID_SIZE) {
+                ctx.moveTo(x, startY);
+                ctx.lineTo(x, endY);
+            }
+            for (let y = startY; y <= endY; y += GRID_SIZE) {
+                ctx.moveTo(startX, y);
+                ctx.lineTo(endX, y);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawSelectionBox() {
+            if (!isSelecting) return;
+            const width = selectionCurrentWorld.x - selectionStartWorld.x;
+            const height = selectionCurrentWorld.y - selectionStartWorld.y;
+            ctx.save();
+            ctx.strokeStyle = '#3b82f6'; 
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+            ctx.lineWidth = 2 / scale;
+            ctx.setLineDash([5 / scale, 5 / scale]); 
+            ctx.fillRect(selectionStartWorld.x, selectionStartWorld.y, width, height);
+            ctx.strokeRect(selectionStartWorld.x, selectionStartWorld.y, width, height);
+            ctx.restore();
+        }
+
+        function drawComponent(c) {
+            ctx.save();
+            ctx.translate(c.x, c.y);
+
+            if (selectedComponentIds.has(c.id)) {
+                ctx.strokeStyle = COLOR_SELECTION;
+                ctx.lineWidth = 3 / scale;
+                // Draw selection rectangle slightly larger than the component
+                let selW = c.w, selH = c.h, selX = 0, selY = 0;
+                if (c.type === 'CONSTANT_0' || c.type === 'CONSTANT_1') {
+                    // Include output node for constants in selection box
+                    selW += 12;
+                } else if (c.type !== 'OUTPUT' && ['NAND', 'NOT', 'NOR', 'XNOR'].includes(c.type)) {
+                    // Include bubble in selection box
+                    selW = c.w + INVERSION_BUBBLE_RADIUS * 2.5 + NODE_RADIUS; 
+                }
+                ctx.strokeRect(selX - 4, selY - 4, selW + 8, selH + 8);
+            }
+
+            // Shadow
+            ctx.shadowColor = "rgba(0, 0, 0, 0.05)";
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetY = 3;
+
+            // Body
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = '#334155'; // Slate-700
+            ctx.lineWidth = 2; 
+
+            ctx.beginPath();
+            if (['INPUT', 'OUTPUT', 'CONSTANT_0', 'CONSTANT_1'].includes(c.type)) {
+                ctx.roundRect(0, 0, c.w, c.h, 6); 
+                ctx.fill();
+                ctx.shadowColor = "transparent"; 
+                ctx.stroke();
+            } else if (c.type === 'NOT') {
+                drawTriangle(c.w, c.h);
+            } else if (['AND', 'NAND'].includes(c.type)) {
+                drawD(c.w, c.h);
+            } else if (['OR', 'XOR', 'NOR', 'XNOR'].includes(c.type)) {
+                drawCrescent(c.w, c.h, ['XOR', 'XNOR'].includes(c.type));
+            }
+
+            ctx.shadowColor = "transparent";
+
+            // Inversion Bubble
+            if (['NAND', 'NOT', 'NOR', 'XNOR'].includes(c.type)) {
+                const bubbleCenterX = c.w + INVERSION_BUBBLE_RADIUS;
+                ctx.beginPath();
+                ctx.fillStyle = 'white';
+                ctx.arc(bubbleCenterX, c.h/2, INVERSION_BUBBLE_RADIUS, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // Input Nodes
+            const inputs = c.getInputNodes();
+            inputs.forEach((n, i) => {
+                const connected = c.inputConnections[i].length > 0;
+                const active = c.inputStates[i] === 1;
+                const color = active ? COLOR_HIGH : '#cbd5e1';
+                
+                ctx.beginPath();
+                ctx.fillStyle = connected ? color : '#f8fafc';
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 1;
+                ctx.arc(0, n.y - c.y, NODE_RADIUS, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+            });
+
+            // Output Node
+            if (c.type !== 'OUTPUT') {
+                const active = c.outputState === 1;
+                const color = active ? COLOR_HIGH : '#cbd5e1';
+                
+                let nodeX = c.w;
+                if (['NOT', 'NAND', 'NOR', 'XNOR'].includes(c.type)) {
+                    nodeX = c.w + INVERSION_BUBBLE_RADIUS * 2.5; // Shifted right past bubble
+                } else if (c.type.startsWith('CONSTANT')) {
+                    nodeX = c.w + 12; // Extra shift for CONST
+                }
+
+                ctx.beginPath();
+                ctx.fillStyle = color;
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 1;
+                ctx.arc(nodeX, c.h/2, NODE_RADIUS, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // Content
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (c.type === 'INPUT') {
+                ctx.fillStyle = c.labelColor;
+                ctx.font = `bold 20px sans-serif`; 
+                ctx.textAlign = 'right';
+                ctx.fillText(c.label, -12, c.h/2);
+
+                // Switch
+                const swW = 32;
+                const swH = 14;
+                const cx = c.w/2;
+                const cy = c.h/2; 
+                ctx.fillStyle = c.outputState ? '#bfdbfe' : '#e2e8f0';
+                ctx.roundRect(cx - swW/2, cy - swH/2, swW, swH, 8);
+                ctx.fill();
+                
+                ctx.beginPath();
+                const knobX = c.outputState ? cx + swW/4 : cx - swW/4;
+                ctx.fillStyle = c.outputState ? COLOR_HIGH : '#94a3b8';
+                ctx.arc(knobX, cy, 9, 0, Math.PI*2);
+                ctx.fill();
+
+            } else if (c.type === 'OUTPUT') {
+                const active = c.outputState === 1;
+                const color = active ? COLOR_INDICATOR_ON : '#e2e8f0';
+                const glow = active ? 20 : 0;
+
+                ctx.shadowColor = active ? COLOR_INDICATOR_ON : 'transparent';
+                ctx.shadowBlur = glow;
+                
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(c.w/2, c.h/2, 12, 0, Math.PI*2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = COLOR_TEXT;
+                ctx.font = `bold 18px sans-serif`; 
+                const labelText = c.label || "F";
+                const letter = labelText.charAt(0);
+                const sub = labelText.substring(1);
+                
+                // Draw 'F'
+                ctx.fillText(letter, c.w/2 - 4, c.h + 18);
+                // Draw '1' as subscript
+                ctx.font = `bold 12px sans-serif`; 
+                ctx.fillText(sub, c.w/2 + 6, c.h + 22);
+
+            } else if (c.type === 'CONSTANT_0' || c.type === 'CONSTANT_1') {
+                ctx.fillStyle = c.outputState === 1 ? COLOR_HIGH : '#94a3b8';
+                ctx.font = `bold 18px monospace`;
+                ctx.fillText(c.label, c.w/2, c.h/2);
+            } else {
+                ctx.fillStyle = COLOR_TEXT;
+                ctx.font = `bold 12px sans-serif`;
+                // Center the symbolic name
+                let symbol = GATE_SYMBOLS[c.type] || c.type;
+                ctx.fillText(symbol, c.w/2, c.h/2);
+            }
+
+            ctx.restore();
+        }
+
+        // --- Shapes ---
+        function drawTriangle(w, h) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(w, h/2);
+            ctx.lineTo(0, h);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+        function drawD(w, h) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(w - h/2, 0);
+            ctx.arc(w - h/2, h/2, h/2, -Math.PI/2, Math.PI/2);
+            ctx.lineTo(0, h);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+        function drawCrescent(w, h, xor) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(w * 0.4, h / 2, 0, h); 
+            ctx.quadraticCurveTo(w * 0.8, h * 0.9, w, h / 2); 
+            ctx.quadraticCurveTo(w * 0.8, h * 0.1, 0, 0); 
+            ctx.fill();
+            ctx.stroke();
+            if (xor) {
+                ctx.beginPath();
+                ctx.moveTo(-6, 0);
+                ctx.quadraticCurveTo(w * 0.4 - 6, h / 2, -6, h);
+                ctx.stroke();
+            }
+        }
+
+        function drawWire(w) {
+            const srcC = components.find(c => c.id === w.source.compId);
+            const tgtC = components.find(c => c.id === w.target.compId);
+            if (!srcC || !tgtC) return;
+
+            const start = srcC.getOutputNode();
+            const end = tgtC.getInputNodes()[w.target.nodeIndex];
+            
+            drawBezier(start.x, start.y, end.x, end.y, w.state === 1, selectedWireIds.has(w.id));
+        }
+
+        function drawBezier(x1, y1, x2, y2, active, selected) {
+            const dist = Math.abs(x2 - x1) * 0.5;
+            const cp1x = x1 + Math.max(dist, 20);
+            const cp2x = x2 - Math.max(dist, 20);
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.bezierCurveTo(cp1x, y1, cp2x, y2, x2, y2);
+            
+            if (selected) {
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = COLOR_SELECTION;
+                ctx.stroke();
+            }
+
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = active ? COLOR_HIGH : '#cbd5e1'; 
+            ctx.stroke();
+        }
+
+        function render() {
+            const parent = canvas.parentElement;
+            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+                canvas.width = parent.clientWidth;
+                canvas.height = parent.clientHeight;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.scale(scale, scale);
+            ctx.translate(cameraX, cameraY);
+            drawGrid();
+            wires.forEach(drawWire);
+            components.forEach(drawComponent);
+            if (isDrawingWire && wireSourceComponent) {
+                const start = wireSourceComponent.getOutputNode();
+                drawBezier(start.x, start.y, currentWorldX, currentWorldY, wireSourceComponent.outputState === 1, false);
+            }
+            drawSelectionBox();
+            ctx.restore();
+            requestAnimationFrame(render);
+        }
+
+        // === Interaction ===
+
+        function handleMouseDown(e) {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            const world = screenToWorld(clickX, clickY);
+            lastMouseX = clickX;
+            lastMouseY = clickY;
+
+            // Right Click -> Marquee
+            if (e.button === 2) {
+                isSelecting = true;
+                selectionStartWorld = { x: world.x, y: world.y };
+                selectionCurrentWorld = { x: world.x, y: world.y };
+                selectedComponentIds.clear();
+                selectedWireIds.clear();
+                return;
+            }
+
+            // Left Click
+            if (e.button === 0) {
+                // Switches
+                for (let c of components) {
+                    if (c.type === 'INPUT') {
+                        if (Math.abs(world.x - (c.x + c.w/2)) < 20 && Math.abs(world.y - (c.y + c.h/2)) < 15) {
+                            c.outputState = 1 - c.outputState;
+                            propagate();
+                            return;
+                        }
+                    }
+                }
+                // Nodes
+                for (let c of components) {
+                    const node = c.getOutputNode();
+                    if (node && Math.hypot(world.x - node.x, world.y - node.y) < 15/scale) {
+                        isDrawingWire = true;
+                        wireSourceComponent = c;
+                        return;
+                    }
+                }
+                // Components
+                let hitComponent = null;
+                for (let i = components.length - 1; i >= 0; i--) {
+                    const c = components[i];
+                    // Adjusted hit area for gates to include the bubble area for inversion gates
+                    let hitW = c.w;
+                    if (c.type !== 'OUTPUT' && ['NAND', 'NOT', 'NOR', 'XNOR'].includes(c.type)) {
+                        hitW = c.w + INVERSION_BUBBLE_RADIUS * 2.5; 
+                    } else if (c.type.startsWith('CONSTANT')) {
+                        hitW = c.w + 12;
+                    }
+                    if (world.x >= c.x && world.x <= c.x + hitW && world.y >= c.y && world.y <= c.y + c.h) {
+                        hitComponent = c;
+                        break;
+                    }
+                }
+                if (hitComponent) {
+                    if (!selectedComponentIds.has(hitComponent.id)) {
+                        selectedComponentIds.clear();
+                        selectedWireIds.clear();
+                        selectedComponentIds.add(hitComponent.id);
+                    }
+                    isDraggingComponent = true;
+                    dragStartWorld = { x: world.x, y: world.y };
+                    initialDragPositions.clear();
+                    selectedComponentIds.forEach(id => {
+                        const comp = components.find(c => c.id === id);
+                        if (comp) initialDragPositions.set(id, { x: comp.x, y: comp.y });
+                    });
+                    return;
+                }
+                // Wires
+                let hitWire = null;
+                for (let w of wires) {
+                    const srcC = components.find(c => c.id === w.source.compId);
+                    const tgtC = components.find(c => c.id === w.target.compId);
+                    if (srcC && tgtC) {
+                        const start = srcC.getOutputNode();
+                        const end = tgtC.getInputNodes()[w.target.nodeIndex];
+                        if (isPointNearBezier(world.x, world.y, start.x, start.y, end.x, end.y)) {
+                            hitWire = w;
+                            break;
+                        }
+                    }
+                }
+                if (hitWire) {
+                    selectedComponentIds.clear();
+                    selectedWireIds.clear();
+                    selectedWireIds.add(hitWire.id);
+                    return;
+                }
+                // Empty Space -> Pan
+                selectedComponentIds.clear();
+                selectedWireIds.clear();
+                isPanning = true;
+            }
+        }
+
+        function handleMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            const world = screenToWorld(mx, my);
+            currentWorldX = world.x;
+            currentWorldY = world.y;
+
+            if (isPanning) {
+                const dx = mx - lastMouseX;
+                const dy = my - lastMouseY;
+                cameraX += dx / scale;
+                cameraY += dy / scale;
+                lastMouseX = mx;
+                lastMouseY = my;
+            } else if (isDraggingComponent) {
+                const deltaX = world.x - dragStartWorld.x;
+                const deltaY = world.y - dragStartWorld.y;
+                selectedComponentIds.forEach(id => {
+                    const comp = components.find(c => c.id === id);
+                    const initial = initialDragPositions.get(id);
+                    if (comp && initial) {
+                        comp.x = Math.round((initial.x + deltaX) / GRID_SIZE) * GRID_SIZE;
+                        comp.y = Math.round((initial.y + deltaY) / GRID_SIZE) * GRID_SIZE;
+                    }
+                });
+                propagate();
+            } else if (isSelecting) {
+                selectionCurrentWorld = { x: world.x, y: world.y };
+            }
+
+            let cursor = 'default';
+            if (isPanning || isDraggingComponent) cursor = 'grabbing';
+            else if (isSelecting) cursor = 'crosshair';
+            else if (isDrawingWire) cursor = 'crosshair';
+            else {
+                for (let c of components) {
+                    const node = c.getOutputNode();
+                    if (node && Math.hypot(world.x - node.x, world.y - node.y) < 15/scale) {
+                        cursor = 'crosshair';
+                        break;
+                    }
+                    // Check input nodes for connection hover (visual feedback only)
+                    const inputs = c.getInputNodes();
+                    for(let node of inputs) {
+                         if (Math.hypot(world.x - node.x, world.y - node.y) < 15/scale) {
+                            cursor = 'pointer'; // Different cursor for connection target
+                            break;
+                        }
+                    }
+                }
+            }
+            canvas.style.cursor = cursor;
+        }
+
+        function handleMouseUp(e) {
+            if (isSelecting) {
+                const x1 = Math.min(selectionStartWorld.x, selectionCurrentWorld.x);
+                const x2 = Math.max(selectionStartWorld.x, selectionCurrentWorld.x);
+                const y1 = Math.min(selectionStartWorld.y, selectionCurrentWorld.y);
+                const y2 = Math.max(selectionStartWorld.y, selectionCurrentWorld.y);
+                
+                // Components Selection
+                components.forEach(c => {
+                    // Check if center of component is inside selection box
+                    if (isPointInRect(c.x + c.w/2, c.y + c.h/2, x1, y1, x2, y2)) selectedComponentIds.add(c.id);
+                });
+
+                // Wires Selection (check if the midpoint of the wire is in the box)
+                wires.forEach(w => {
+                    const srcC = components.find(c => c.id === w.source.compId);
+                    const tgtC = components.find(c => c.id === w.target.compId);
+                    if (srcC && tgtC) {
+                        const start = srcC.getOutputNode();
+                        const end = tgtC.getInputNodes()[w.target.nodeIndex];
+                        const midX = (start.x + end.x)/2;
+                        const midY = (start.y + end.y)/2;
+                        if (isPointInRect(midX, midY, x1, y1, x2, y2)) selectedWireIds.add(w.id);
+                    }
+                });
+
+                isSelecting = false;
+            }
+            if (isDrawingWire && wireSourceComponent) {
+                let closestNode = null;
+                let minDistance = Infinity;
+                let targetComp = null;
+                for (let c of components) {
+                    if (c.type === 'INPUT' || c.type.startsWith('CONSTANT')) continue;
+                    const nodes = c.getInputNodes();
+                    for (let n of nodes) {
+                        const dist = Math.hypot(currentWorldX - n.x, currentWorldY - n.y);
+                        if (dist < MAG_SNAP_DISTANCE / scale && dist < minDistance) {
+                            minDistance = dist;
+                            closestNode = n;
+                            targetComp = c;
+                        }
+                    }
+                }
+                if (closestNode && targetComp) {
+                    if (targetComp.id === wireSourceComponent.id) showMessage("Cannot connect to self", true);
+                    // REMOVED RESTRICTION: else if (targetComp.inputConnections[closestNode.index].length > 0)
+                    else {
+                        const w = {
+                            id: wireIdCounter++,
+                            source: { compId: wireSourceComponent.id },
+                            target: { compId: targetComp.id, nodeIndex: closestNode.index },
+                            state: wireSourceComponent.outputState
+                        };
+                        wires.push(w);
+                        targetComp.inputConnections[closestNode.index].push(w.id);
+                        propagate();
+                    }
+                }
+            }
+            isPanning = false;
+            isDraggingComponent = false;
+            wireSourceComponent = null;
+            isDrawingWire = false;
+        }
+
+        function deleteSelection() {
+            selectedWireIds.forEach(id => {
+                const w = wires.find(x => x.id === id);
+                if (w) {
+                    const tgt = components.find(c => c.id === w.target.compId);
+                    if (tgt) tgt.inputConnections[w.target.nodeIndex] = tgt.inputConnections[w.target.nodeIndex].filter(wid => wid !== id);
+                }
+            });
+            wires = wires.filter(w => !selectedWireIds.has(w.id));
+            selectedComponentIds.forEach(id => {
+                wires = wires.filter(w => {
+                    const isSrc = w.source.compId === id;
+                    const isTgt = w.target.compId === id;
+                    if (isTgt) {
+                        const tgt = components.find(c => c.id === w.target.compId);
+                        // Remove from its inputConnections
+                        if (tgt) {
+                            tgt.inputConnections.forEach((conn, idx) => {
+                                tgt.inputConnections[idx] = conn.filter(wid => wid !== w.id);
+                            });
+                        }
+                    }
+                    if (isSrc) {
+                         // Must clear target component's input connection if the wire source is deleted
+                         wires.filter(w => w.source.compId === id).forEach(w => {
+                            const tgt = components.find(c => c.id === w.target.compId);
+                            if (tgt) tgt.inputConnections[w.target.nodeIndex] = [];
+                         });
+                    }
+                    return !(isSrc || isTgt);
+                });
+            });
+            components = components.filter(c => !selectedComponentIds.has(c.id));
+            relabelComponents('INPUT');
+            relabelComponents('OUTPUT');
+            selectedWireIds.clear();
+            selectedComponentIds.clear();
+            propagate();
+        }
+
+        // Listen Button Logic
+        function checkAndPlay() {
+            const inputs = components.filter(c => c.type === 'INPUT').length;
+            const outputs = components.filter(c => c.type === 'OUTPUT').length;
+            if (inputs < 4 || outputs < 4) {
+                showMessage("Need at least 4 Inputs and 4 Outputs to generate music.", true);
+            } else {
+                const musicSection = document.getElementById('music-player-section');
+                musicSection.classList.remove('hidden');
+                musicSection.scrollIntoView({ behavior: 'smooth' });
+                showMessage("Circuit Validated. Playing Audio...");
+            }
+        }
+
+        // Drag Drop Fix
+        function handleDragStart(e) {
+            e.dataTransfer.setData('type', e.currentTarget.dataset.componentType);
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const type = e.dataTransfer.getData('type');
+            if (type) {
+                const rect = canvas.getBoundingClientRect();
+                const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+                const newComponent = new Component(type, world.x, world.y);
+                components.push(newComponent);
+                if (type === 'INPUT' || type === 'OUTPUT') relabelComponents(type);
+                propagate();
+            }
+        }
+
+        function init() {
+            canvas = document.getElementById('circuitCanvas');
+            ctx = canvas.getContext('2d');
+            window.addEventListener('contextmenu', e => e.preventDefault());
+            canvas.addEventListener('mousedown', handleMouseDown);
+            window.addEventListener('mousemove', handleMouseMove); 
+            window.addEventListener('mouseup', handleMouseUp);
+            window.addEventListener('keydown', e => { if (e.key === 'Delete' || e.key === 'Backspace') deleteSelection(); });
+            
+            document.querySelectorAll('.component-item').forEach(el => {
+                el.setAttribute('draggable', true);
+                el.addEventListener('dragstart', handleDragStart);
+            });
+            canvas.addEventListener('dragover', e => e.preventDefault());
+            canvas.addEventListener('drop', handleDrop);
+
+            // Tray Buttons
+            document.getElementById('zoomInBtn').onclick = () => { scale = Math.min(scale + ZOOM_STEP, MAX_SCALE); };
+            document.getElementById('zoomOutBtn').onclick = () => { scale = Math.max(scale - ZOOM_STEP, MIN_SCALE); };
+            document.getElementById('deleteBtn').onclick = deleteSelection;
+            document.getElementById('clearBtn').onclick = () => {
+                if(confirm('Clear All?')) {
+                    components = []; wires = []; cameraX = 0; cameraY = 0; scale = 1;
+                    selectedComponentIds.clear(); selectedWireIds.clear();
+                    relabelComponents('INPUT'); relabelComponents('OUTPUT');
+                    propagate();
+                }
+            };
+            document.getElementById('helpBtn').onclick = () => document.getElementById('helpModal').classList.remove('hidden');
+            document.getElementById('closeHelpBtn').onclick = () => document.getElementById('helpModal').classList.add('hidden');
+            document.getElementById('listenBtn').onclick = checkAndPlay;
+            document.getElementById('expressionBtn').onclick = showExpressions;
+            document.getElementById('truthTableBtn').onclick = showTruthTable;
+
+            // Modal Close Buttons
+            document.getElementById('closeExpressionBtn').onclick = () => document.getElementById('expressionModal').classList.add('hidden');
+            document.getElementById('closeTruthTableBtn').onclick = () => document.getElementById('truthTableModal').classList.add('hidden');
+
+            // Pagination Controls
+            document.getElementById('prevTablePage').onclick = () => {
+                if (currentPage > 0) {
+                    currentPage--;
+                    const inputs = components.filter(c => c.type === 'INPUT').sort((a, b) => a.label.localeCompare(b.label));
+                    const connectedOutputs = components.filter(c => c.type === 'OUTPUT' && wires.some(w => w.target.compId === c.id)).sort((a, b) => a.label.localeCompare(b.label));
+                    renderTruthTablePage(inputs, connectedOutputs);
+                }
+            };
+            document.getElementById('nextTablePage').onclick = () => {
+                if (currentPage < totalPages - 1) {
+                    currentPage++;
+                    const inputs = components.filter(c => c.type === 'INPUT').sort((a, b) => a.label.localeCompare(b.label));
+                    const connectedOutputs = components.filter(c => c.type === 'OUTPUT' && wires.some(w => w.target.compId === c.id)).sort((a, b) => a.label.localeCompare(b.label));
+                    renderTruthTablePage(inputs, connectedOutputs);
+                }
+            };
+
+
+            render();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
