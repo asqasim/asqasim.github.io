@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LocalShare</title>
+    
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    
+    <!-- Lightweight QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+</head>
+<body>
+    
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="offline-banner" style="display: none;">
+        <span class="material-symbols-rounded" style="font-size: 16px;">wifi_off</span>
+        You are offline. Messages will be queued and sent automatically.
+    </div>
+
+    <!-- Pairing Screen (For Guest Devices) -->
+    <div id="pairing-screen" class="glass-overlay" style="display: none;">
+        <div class="pairing-box">
+            <h2>Pair Device</h2>
+            <p>Scan the QR code on the host PC, or enter the 6-digit code below.</p>
+            <input type="text" id="pairing-code-input" placeholder="000000" maxlength="6">
+            <button id="verify-btn">Verify</button>
+            <p id="auth-error" style="color: #ff4444; display: none; margin-top: 10px;">Incorrect Code.</p>
+        </div>
+    </div>
+
+    <!-- Host Dashboard: Pair & Manage Devices -->
+    <div id="devices-modal" class="glass-overlay" style="display: none;">
+        <div class="pairing-box" style="max-width: 500px; width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>Device Management</h2>
+                <button id="close-devices-btn" class="icon-btn"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            
+            <!-- Pairing Info (QR & Code) -->
+            <div class="host-pairing-card">
+                <div style="text-align: left; flex-grow: 1;">
+                    <h3 style="margin-bottom: 6px; font-weight: 500;">Pair New Device</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Scan QR to auto-verify, or enter PIN.</p>
+                    <strong id="host-code-display" style="font-size: 26px; letter-spacing: 6px; font-family: monospace;">---</strong>
+                </div>
+                <!-- Scanning this QR will directly open the URL and verify the device -->
+                <canvas id="qr-code-canvas" width="100" height="100" style="border-radius: 8px; border: 1px solid var(--glass-border); background: #fff; padding: 4px;"></canvas>
+            </div>
+
+            <!-- Connected Devices List (Includes Host PC now) -->
+            <div style="text-align: left; flex-grow: 1; overflow-y: auto; padding-right: 5px;" id="devices-scroll-area">
+                <h3 style="margin-bottom: 12px; font-weight: 500; font-size: 15px;">Your Network Devices</h3>
+                <div id="devices-list-container">
+                    <!-- Devices injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <!-- Sidebar -->
+        <nav id="sidebar">
+            <div class="nav-item active"><span class="material-symbols-rounded">chat_bubble</span></div>
+            <div class="nav-item" id="nav-devices" title="Manage Devices"><span class="material-symbols-rounded">devices</span></div>
+            <div class="nav-item"><span class="material-symbols-rounded">perm_media</span></div>
+            <div class="spacer"></div>
+            <div class="nav-item"><span class="material-symbols-rounded">settings</span></div>
+        </nav>
+
+        <main id="chat-area">
+            <header class="glass-header">
+                <button id="mobile-menu-btn" class="mobile-only"><span class="material-symbols-rounded">menu</span></button>
+                <div class="device-persona">
+                    <div class="avatar gradient-dark"></div>
+                    <h2>Local Network</h2>
+                </div>
+                
+                <div class="spacer"></div>
+                
+                <!-- Host 'Pair Device' Button (Shown only on Windows PC) -->
+                <button id="host-dashboard-btn" style="display: none;" class="glass-btn">
+                    <span class="material-symbols-rounded" style="font-size: 18px;">qr_code_scanner</span>
+                    <span class="btn-text">Manage Devices</span>
+                </button>
+            </header>
+
+            <!-- Floating Date Chip -->
+            <div id="floating-date-chip" class="floating-date-chip">Today</div>
+
+            <!-- Chat Bubbles Area -->
+            <div class="messages-container" id="messages-container"></div>
+
+            <!-- Composer Area -->
+            <div class="composer-container">
+                <div class="composer">
+                    <!-- Notice the "multiple" attribute added here -->
+                    <input type="file" id="file-input" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" multiple hidden>
+                    <button class="icon-btn" id="attach-btn" title="Attach Files">
+                        <span class="material-symbols-rounded">add</span>
+                    </button>
+                    <input type="text" placeholder="Type a message..." id="message-input" autocomplete="off">
+                    <button class="icon-btn" id="send-btn" title="Send Message">
+                        <span class="material-symbols-rounded">send</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Hidden Inputs for Device Editing -->
+    <input type="file" id="avatar-upload-input" accept="image/*" hidden>
+    <input type="color" id="color-picker-input" hidden>
+
+    <!-- IndexedDB Logic for Offline Queueing -->
+    <script src="/static/db.js"></script>
+    <!-- Main App Logic -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
