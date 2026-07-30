@@ -61,5 +61,57 @@
   <footer class="site-footer">
     <div class="container">© Your Name — Built with ❤️</div>
   </footer>
+
+<!-- Portfolio Traffic Tracking Script -->
+<script>
+  async function fetchGeoData() {
+    // Try Primary API: ipwho.is (rarely blocked by ad blockers)
+    try {
+      const res = await fetch('https://ipwho.is/');
+      const data = await res.json();
+      if (data.success) {
+        return { ip: data.ip, country: data.country, city: data.city };
+      }
+    } catch (e) {}
+
+    // Try Backup API 1: freeipapi.com
+    try {
+      const res = await fetch('https://freeipapi.com/api/json');
+      const data = await res.json();
+      return { ip: data.ipAddress, country: data.countryName, city: data.cityName };
+    } catch (e) {}
+
+    // Try Backup API 2: ipify (Gets IP only, almost never blocked)
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      return { ip: data.ip, country: 'Unknown', city: 'Unknown' };
+    } catch (e) {}
+
+    // Ultimate fallback if the user is blocking all network requests
+    return { ip: 'Blocked by Browser', country: 'Unknown', city: 'Unknown' };
+  }
+
+  // Execute and log to Google Sheets
+  fetchGeoData().then(geo => {
+    const payload = {
+      ip: geo.ip || 'Unknown',
+      country: geo.country || 'Unknown',
+      city: geo.city || 'Unknown',
+      os: navigator.platform,
+      browser: navigator.userAgent,
+      referrer: document.referrer || 'Direct Visit'
+    };
+
+    fetch('https://script.google.com/macros/s/AKfycby2JfRMKF6853nBJ_Erm_WhO3a-8r2GX_7NcSakWaccz_f9JkOCmbzzJ_9SEqcdEl4XAw/exec', {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  });
+</script>
+
+  
 </body>
 </html>
